@@ -1,28 +1,6 @@
-import hashlib
 import time
-
-
-class Transaction:
-    def __init__(self, amount, sender_public_key, receiver_public_key):
-        self.amount = amount
-        self.sender_public_key = sender_public_key
-        self.receiver_public_key = receiver_public_key
-
-    def __str__(self):
-        return f"Transaction(amount={self.amount}, sender={self.sender_public_key}, receiver={self.receiver_public_key})"
-
-
-class Block:
-    def __init__(self, index, timestamp, data, previous_hash):
-        self.index = index
-        self.timestamp = timestamp
-        self.data = data  # Now it's a Transaction object
-        self.previous_hash = previous_hash
-        self.hash = self.calculate_hash()
-
-    def calculate_hash(self):
-        block_content = f"{self.index}{self.timestamp}{self.data}{self.previous_hash}"
-        return hashlib.sha256(block_content.encode()).hexdigest()
+from models import Block, Transaction
+from database import BlockchainDB
 
 
 class Blockchain:
@@ -71,32 +49,30 @@ class Blockchain:
 
 
 if __name__ == '__main__':
-    # Example usage
     blockchain = Blockchain()
 
-    # Creating transactions
-    transaction1 = Transaction(100, "Alice_Public_Key", "Bob_Public_Key")
-    transaction2 = Transaction(50, "Bob_Public_Key", "Charlie_Public_Key")
-    transaction3 = Transaction(20, "Charlie_Public_Key", "Alice_Public_Key")
+    # Adding transactions
+    blockchain.add_block(Transaction(100, "Alice_Public_Key", "Bob_Public_Key"))
+    blockchain.add_block(Transaction(50, "Bob_Public_Key", "Charlie_Public_Key"))
+    blockchain.add_block(Transaction(20, "Charlie_Public_Key", "Alice_Public_Key"))
 
-    # Adding blocks with transactions
-    blockchain.add_block(transaction1)
-    blockchain.add_block(transaction2)
-    blockchain.add_block(transaction3)
+    db = BlockchainDB()
 
-    # Display the blockchain
+    # Save blocks to database
+    for block in blockchain.chain:
+        db.save_block(block)
+
+    # Load blockchain from database
+    loaded_chain = db.load_blockchain()
+
+    # Use the loaded data in a Blockchain instance
+    blockchain.chain = loaded_chain
+
+    # Display the loaded blockchain
     blockchain.display_chain()
 
-    # Validate the blockchain
+    # Validate the loaded blockchain
     print("Is blockchain valid?", blockchain.is_chain_valid())
 
-    print("Now we are going to try to tamper the blockchain")
-
-    # Tamper with the blockchain
-    blockchain.chain[1].data = Transaction(999, "Hacker_Public_Key", "Bob_Public_Key")
-
-    # toggle the following line of code to experiment between a tampered block and a tampered and not linked block
-    blockchain.chain[1].hash = blockchain.chain[1].calculate_hash()
-
-    # Revalidate the blockchain
-    print("Is blockchain valid after tampering?", blockchain.is_chain_valid())
+    # Close the database connection
+    db.close()
