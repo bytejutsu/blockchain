@@ -6,8 +6,12 @@ from utils import load_key_from_file
 
 
 class Blockchain:
-    def __init__(self):
-        self.chain = [self.create_genesis_block()]
+    def __init__(self, from_json=False):
+        # If from_json is True, initialize an empty chain; otherwise, create the genesis block
+        if from_json:
+            self.chain = []
+        else:
+            self.chain = [self.create_genesis_block()]
 
     def create_genesis_block(self):
         return Block(0, time.time(), "Genesis Block", "0")
@@ -57,9 +61,10 @@ class Blockchain:
             print(block.to_dict(from_json=True))
 
     @staticmethod
-    def from_dict(data):
+    def from_dict(data, from_json=False):
         # Deserialize from dictionary to recreate the blockchain and its blocks
-        blockchain = Blockchain()
+
+        blockchain = Blockchain(from_json)
 
         for block_data in data['chain']:
             # Extracting the block data
@@ -81,21 +86,18 @@ class Blockchain:
                 transaction.signature = signature
             else:
                 # Handle other cases (e.g., if data is just a string in the genesis block)
-                transaction = None
+                transaction = data
 
             # Add block to the blockchain
-            print(block_hash)
             block = Block(index, timestamp, data=transaction, previous_hash=previous_hash, block_hash=block_hash)
-            #blockchain.add_block(block)
             blockchain.chain.append(block)
 
         return blockchain
 
-    @classmethod
-    def save_blockchain_to_json(cls, blockchain, file_path):
+    def save_blockchain_to_json(self, file_path):
         # Save the blockchain as a JSON file
         with open(file_path, 'w') as json_file:
-            json.dump(blockchain.to_dict(), json_file, indent=4)
+            json.dump(self.to_dict(), json_file, indent=4)
 
     @staticmethod
     def load_blockchain_from_json(file_path):
@@ -103,7 +105,7 @@ class Blockchain:
         if os.path.exists(file_path):
             with open(file_path, 'r') as json_file:
                 data = json.load(json_file)
-                return Blockchain.from_dict(data)
+                return Blockchain.from_dict(data, from_json=True)
         else:
             print(f"File {file_path} does not exist.")
             return Blockchain()  # Return an empty blockchain if the file doesn't exist
@@ -173,7 +175,7 @@ if __name__ == '__main__':
     blockchain.add_block(transaction3)
 
     # Save the blockchain to a file
-    blockchain.save_blockchain_to_json(blockchain, './blockchain.json')
+    blockchain.save_blockchain_to_json('./blockchain.json')
 
     # Load the blockchain from a file
     loaded_blockchain = Blockchain.load_blockchain_from_json('./blockchain.json')
