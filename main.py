@@ -22,15 +22,15 @@ class Blockchain:
             previous_block = self.chain[i - 1]
 
             # Validate hash
-            if current_block.hash != current_block.calculate_hash():
+            if current_block.block_hash != current_block.calculate_hash():
                 print(f"Block {current_block.index} hash mismatch!")
                 return False
 
             # Validate chain linkage
-            if current_block.previous_hash != previous_block.hash:
+            if current_block.previous_hash != previous_block.block_hash:
                 print(f"Block {current_block.index} linkage mismatch!")
                 print(f"current_block_previous_hash {current_block.previous_hash}")
-                print(f"previous_block_hash {previous_block.hash}")
+                print(f"previous_block_hash {previous_block.block_hash}")
                 return False
 
             # Validate transactions
@@ -43,7 +43,7 @@ class Blockchain:
 
     def add_block(self, transaction):
         previous_block = self.get_latest_block()
-        new_block = Block(len(self.chain), time.time(), transaction, previous_block.hash)
+        new_block = Block(len(self.chain), time.time(), transaction, previous_block.block_hash)
         self.chain.append(new_block)
 
     def to_dict(self):
@@ -54,8 +54,7 @@ class Blockchain:
 
     def display_chain(self):
         for block in self.chain:
-            print("Block Details:")
-            print(block)
+            print(block.to_dict(from_json=True))
 
     @staticmethod
     def from_dict(data):
@@ -67,7 +66,7 @@ class Blockchain:
             index = block_data['index']
             timestamp = block_data['timestamp']
             previous_hash = block_data['previous_hash']
-            hash = block_data['hash']
+            block_hash = block_data['block_hash']
             data = block_data['data']  # This is where the transaction details are stored
 
             # Deserialize transaction data
@@ -85,8 +84,10 @@ class Blockchain:
                 transaction = None
 
             # Add block to the blockchain
-            block = Block(index, timestamp, data=transaction, previous_hash=previous_hash)
-            blockchain.add_block(block)
+            print(block_hash)
+            block = Block(index, timestamp, data=transaction, previous_hash=previous_hash, block_hash=block_hash)
+            #blockchain.add_block(block)
+            blockchain.chain.append(block)
 
         return blockchain
 
@@ -180,4 +181,5 @@ if __name__ == '__main__':
     # Display the loaded blockchain
     loaded_blockchain.display_chain()
 
-
+    # Check if the chain is valid
+    #print("Is Chain Valid: ", loaded_blockchain.is_chain_valid())
