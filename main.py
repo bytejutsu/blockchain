@@ -1,9 +1,7 @@
+import json
 import os
 import time
 from models import Block, Transaction
-from database import BlockchainDB
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
 from utils import load_key_from_file
 
 
@@ -48,14 +46,69 @@ class Blockchain:
         new_block = Block(len(self.chain), time.time(), transaction, previous_block.hash)
         self.chain.append(new_block)
 
+    def to_dict(self):
+        # Convert the blockchain into a dictionary format
+        return {
+            "chain": [block.to_dict() for block in self.chain]
+        }
+
     def display_chain(self):
         for block in self.chain:
             print("Block Details:")
             print(block)
 
+    @staticmethod
+    def from_dict(data):
+        # Deserialize from dictionary to recreate the blockchain and its blocks
+        blockchain = Blockchain()
+
+        for block_data in data['chain']:
+            # Extracting the block data
+            index = block_data['index']
+            timestamp = block_data['timestamp']
+            previous_hash = block_data['previous_hash']
+            hash = block_data['hash']
+            data = block_data['data']  # This is where the transaction details are stored
+
+            # Deserialize transaction data
+            if isinstance(data, dict):
+                amount = data.get('amount')
+                sender_public_key = data.get('sender_public_key')
+                receiver_public_key = data.get('receiver_public_key')
+                signature = data.get('signature')
+
+                # Create a transaction object with the data
+                transaction = Transaction(amount, sender_public_key, receiver_public_key)
+                transaction.signature = signature
+            else:
+                # Handle other cases (e.g., if data is just a string in the genesis block)
+                transaction = None
+
+            # Add block to the blockchain
+            block = Block(index, timestamp, data=transaction, previous_hash=previous_hash)
+            blockchain.add_block(block)
+
+        return blockchain
+
+    @classmethod
+    def save_blockchain_to_json(cls, blockchain, file_path):
+        # Save the blockchain as a JSON file
+        with open(file_path, 'w') as json_file:
+            json.dump(blockchain.to_dict(), json_file, indent=4)
+
+    @staticmethod
+    def load_blockchain_from_json(file_path):
+        # Load a blockchain from a JSON file
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as json_file:
+                data = json.load(json_file)
+                return Blockchain.from_dict(data)
+        else:
+            print(f"File {file_path} does not exist.")
+            return Blockchain()  # Return an empty blockchain if the file doesn't exist
+
 
 if __name__ == '__main__':
-
     # Directory where keys are stored
     base_directory = r'./users/'  # Adjust to the correct directory
 
@@ -113,28 +166,18 @@ if __name__ == '__main__':
     blockchain.add_block(transaction1)
 
     # trying to alter the transaction2 content
-    #transaction2.amount = 500
+    # transaction2.amount = 500
 
     blockchain.add_block(transaction2)
     blockchain.add_block(transaction3)
 
-    #db = BlockchainDB()
+    # Save the blockchain to a file
+    blockchain.save_blockchain_to_json(blockchain, './blockchain.json')
 
-    # Save blocks to database
-    #for block in blockchain.chain:
-    #    db.save_block(block)
-
-    # Load blockchain from database
-    #loaded_chain = db.load_blockchain()
-
-    # Use the loaded data in a Blockchain instance
-    #blockchain.chain = loaded_chain
+    # Load the blockchain from a file
+    loaded_blockchain = Blockchain.load_blockchain_from_json('./blockchain.json')
 
     # Display the loaded blockchain
-    blockchain.display_chain()
+    loaded_blockchain.display_chain()
 
-    # Validate the loaded blockchain
-    print("Is blockchain valid?", blockchain.is_chain_valid())
 
-    # Close the database connection
-    #db.close()
